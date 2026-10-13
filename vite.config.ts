@@ -28,7 +28,7 @@ export default defineConfig({
       includeAssets: ["icons/icon.svg"],
       manifest: {
         name: "STEM Operating System",
-        short_name: "Stem OS",
+        short_name: "StemOS",
         description: "ORT SA STEM & IT Academy departmental management platform",
         theme_color: "#1E4589",
         background_color: "#ffffff",
