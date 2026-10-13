@@ -17,3 +17,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     </QueryClientProvider>
   </React.StrictMode>,
 );
+console.log("[boot] url =", JSON.stringify(import.meta.env.VITE_SUPABASE_URL));
+console.log("[boot] key =", JSON.stringify(import.meta.env.VITE_SUPABASE_ANON_KEY));
+console.log("[boot] all env =", import.meta.env);
