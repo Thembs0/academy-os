@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { BarChart3, ClipboardCheck, FileLock2, FolderKanban, FileText, FileSpreadsheet, ScrollText, ShieldCheck } from "lucide-react";
+import { InstallAppButton } from "@/components/InstallAppButton";
 
 const cards = [
   { icon: FolderKanban, title: "Project management", text: "Projects, teams and schools with full assignment history." },
@@ -174,6 +175,7 @@ export default function Landing() {
       >
         Request access
       </Link>
+      <InstallAppButton />
     </div>
   </div>
 
