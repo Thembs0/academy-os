@@ -25,6 +25,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      injectRegister: "auto",
       includeAssets: ["icons/icon.svg"],
       manifest: {
         name: "STEM Operating System",
@@ -43,12 +44,11 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: "/index.html",
-        navigateFallbackDenylist: [/^\/submit\//],
+        navigateFallbackDenylist: [/^\/submit\//, /^\/signin\//],
         runtimeCaching: [],
-          // NEW: immediately activate new service workers and take control of all clients
-  skipWaiting: true,
-  clientsClaim: true,
-  cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
       },
     }),
   ],
