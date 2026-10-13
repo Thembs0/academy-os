@@ -175,7 +175,7 @@ export default function Landing() {
       >
         Request access
       </Link>
-      <InstallAppButton />
+      {/*<InstallAppButton />*/}
     </div>
   </div>
 
