@@ -45,6 +45,10 @@ export default defineConfig({
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/submit\//],
         runtimeCaching: [],
+          // NEW: immediately activate new service workers and take control of all clients
+  skipWaiting: true,
+  clientsClaim: true,
+  cleanupOutdatedCaches: true,
       },
     }),
   ],
