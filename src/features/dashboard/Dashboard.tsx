@@ -20,7 +20,7 @@ const greeting = () => { const h = new Date().getHours(); return h < 12 ? "Good 
 /* Ambient page background - subtle, never distracting. */
 function Ambient() {
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[calc(100dvh-72px)] overflow-hidden lg:h-dvh">
       <div className="absolute inset-0 bg-gradient-to-b from-sky-50/60 via-white to-slate-50/70" />
       <div
         className="absolute -top-40 -left-32 h-[520px] w-[520px] rounded-full opacity-40 blur-3xl"

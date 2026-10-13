@@ -123,7 +123,7 @@ export default function AppLayout() {
       {/* ── Mobile bottom nav ─────────────────────────────────────────── */}
 <nav
   aria-label="Primary"
-  className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/60 bg-white/95 backdrop-blur-xl lg:hidden no-print"
+  className="fixed inset-x-0 bottom-0 z-[60] border-t border-slate-200/60 bg-white/95 backdrop-blur-xl lg:hidden no-print"
   style={{
     paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)",
     paddingLeft: "env(safe-area-inset-left, 0px)",
