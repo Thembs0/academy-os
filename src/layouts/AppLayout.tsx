@@ -120,66 +120,104 @@ export default function AppLayout() {
       </div>
 
       {/* Mobile bottom nav */}
-      <nav
+      {/* ── Mobile bottom nav ─────────────────────────────────────────── */}
+<nav
   aria-label="Primary"
-  className="fixed inset-x-0 bottom-0 z-40 flex border-t bg-white lg:hidden no-print"
+  className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/60 bg-white/95 backdrop-blur-xl lg:hidden no-print"
   style={{
-    // Pad the interior so tap targets sit above the home-indicator strip
-    paddingBottom: "calc(env(safe-area-inset-bottom) + 6px)",
-    // Pad the sides so the two corner buttons aren't clipped by round corners
-    paddingLeft: "env(safe-area-inset-left)",
-    paddingRight: "env(safe-area-inset-right)",
+    paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)",
+    paddingLeft: "env(safe-area-inset-left, 0px)",
+    paddingRight: "env(safe-area-inset-right, 0px)",
   }}
 >
-  {bottom.map((i) => (
-    <Link
-      key={i.to}
-      to={i.to}
-      aria-current={link(i.to) ? "page" : undefined}
-      className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${
-        link(i.to) ? "text-brand" : "text-slate-500"
-      }`}
+  <div className="flex h-14 items-stretch">
+    {bottom.map((i) => (
+      <Link
+        key={i.to}
+        to={i.to}
+        aria-current={link(i.to) ? "page" : undefined}
+        className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold leading-none transition-colors ${
+          link(i.to) ? "text-brand" : "text-slate-500"
+        }`}
+      >
+        <i.icon className="h-5 w-5" aria-hidden />
+        <span className="truncate px-1">{i.label.replace("My ", "")}</span>
+        {i.to === "/notifications" && unread > 0 && (
+          <span className="absolute right-1/4 top-1.5 h-2 w-2 rounded-full bg-red-600 ring-2 ring-white" aria-hidden />
+        )}
+      </Link>
+    ))}
+    <button
+      type="button"
+      onClick={() => setMore(true)}
+      className="relative flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold leading-none text-slate-500 transition-colors hover:text-slate-700"
+      aria-label="More navigation"
     >
-      <i.icon className="h-6 w-6" aria-hidden />
-      {i.label.replace("My ", "")}
-      {i.to === "/notifications" && unread > 0 && (
-        <span className="absolute right-[28%] top-1 h-2.5 w-2.5 rounded-full bg-red-600" aria-hidden />
-      )}
-    </Link>
-  ))}
-  <button
-    onClick={() => setMore(true)}
-    className="flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium text-slate-500"
-  >
-    <MoreHorizontal className="h-6 w-6" aria-hidden />More
-  </button>
+      <MoreHorizontal className="h-5 w-5" aria-hidden />
+      <span className="truncate px-1">More</span>
+    </button>
+  </div>
 </nav>
 
-      {more && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 lg:hidden" onClick={() => setMore(false)}>
-          <div
-            role="dialog"
-            aria-label="More navigation"
-            className="absolute inset-x-0 bottom-0 max-h-[80vh] overflow-y-auto rounded-t-2xl bg-white p-4"
-            onClick={(e) => e.stopPropagation()}
+{/* ── Mobile "More" slide-up menu ──────────────────────────────── */}
+{more && (
+  <div
+    className="fixed inset-0 z-[100] flex items-end bg-slate-900/50 backdrop-blur-sm lg:hidden"
+    onClick={() => setMore(false)}
+    role="dialog"
+    aria-modal="true"
+    aria-label="More navigation"
+  >
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className="relative w-full overflow-hidden rounded-t-3xl border-t border-slate-200 bg-white shadow-[0_-20px_50px_-20px_rgba(15,23,42,0.35)]"
+      style={{
+        paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
+        paddingLeft: "env(safe-area-inset-left, 0px)",
+        paddingRight: "env(safe-area-inset-right, 0px)",
+      }}
+    >
+      {/* Drag handle */}
+      <div aria-hidden className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-slate-300" />
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 pt-4 pb-3">
+        <span className="text-sm font-bold tracking-tight text-slate-900">Menu</span>
+        <button
+          aria-label="Close menu"
+          onClick={() => setMore(false)}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-all hover:bg-slate-200 hover:text-slate-700 active:scale-95"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Grid of links */}
+      <div className="max-h-[60vh] overflow-y-auto px-5 pb-2">
+        <div className="grid grid-cols-2 gap-2">
+          {items.slice(4).map((i) => (
+            <Link
+              key={i.to}
+              to={i.to}
+              onClick={() => setMore(false)}
+              className="flex min-h-[52px] items-center gap-2.5 rounded-2xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-800 transition-all hover:border-brand/40 hover:bg-brand/5 active:scale-[0.98]"
+            >
+              <i.icon className="h-5 w-5 shrink-0 text-brand" aria-hidden />
+              <span className="truncate">{i.label}</span>
+            </Link>
+          ))}
+          <button
+            onClick={auth.signOut}
+            className="flex min-h-[52px] items-center gap-2.5 rounded-2xl border border-red-200 bg-red-50 px-3.5 text-sm font-medium text-red-700 transition-all hover:bg-red-100 active:scale-[0.98]"
           >
-            <div className="mb-2 flex items-center justify-between">
-              <span className="font-semibold">Menu</span>
-              <button aria-label="Close" onClick={() => setMore(false)} className="p-2"><X className="h-5 w-5" /></button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {items.slice(4).map((i) => (
-                <Link key={i.to} to={i.to} className="flex min-h-[48px] items-center gap-3 rounded-lg border px-3 text-sm font-medium">
-                  <i.icon className="h-5 w-5 text-brand" aria-hidden />{i.label}
-                </Link>
-              ))}
-              <button onClick={auth.signOut} className="flex min-h-[48px] items-center gap-3 rounded-lg border px-3 text-sm font-medium text-red-700">
-                <LogOut className="h-5 w-5" />Sign out
-              </button>
-            </div>
-          </div>
+            <LogOut className="h-5 w-5 shrink-0" aria-hidden />
+            <span className="truncate">Sign out</span>
+          </button>
         </div>
-      )}
+      </div>
+    </div>
+  </div>
+)}
 
       <Menu className="hidden" />
     </div>

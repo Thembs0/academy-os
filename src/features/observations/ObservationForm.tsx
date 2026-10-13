@@ -803,7 +803,15 @@ export default function ObservationForm() {
         </div>
 
         {/* ── Sticky bottom action bar ─────────────────────────────── */}
-      <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-30 border-t border-slate-200/60 bg-white/75 px-4 pb-3 pt-3 backdrop-blur-xl sm:static sm:bottom-auto sm:mt-5 sm:rounded-3xl sm:border sm:border-slate-200/70 sm:bg-white/75 sm:px-4 sm:py-3 sm:shadow-[0_15px_40px_-25px_rgba(15,23,42,0.35)]">          <div className="mx-auto flex max-w-2xl gap-2.5">
+      <div
+  className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/60 bg-white/85 backdrop-blur-xl sm:static sm:mt-5 sm:rounded-3xl sm:border sm:border-slate-200/70 sm:bg-white/85 sm:px-4 sm:py-3 sm:shadow-[0_15px_40px_-25px_rgba(15,23,42,0.35)]"
+  style={{
+    paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
+    paddingLeft: "calc(env(safe-area-inset-left, 0px) + 16px)",
+    paddingRight: "calc(env(safe-area-inset-right, 0px) + 16px)",
+    paddingTop: "12px",
+  }}
+>          <div className="mx-auto flex max-w-2xl gap-2.5">
             <button
               className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3.5 text-sm font-semibold text-slate-800 shadow-sm backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:bg-white hover:shadow-md active:translate-y-0 active:scale-[0.98]"
               onClick={step === 0 ? () => nav("/observations") : back}
