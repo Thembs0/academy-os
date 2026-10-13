@@ -108,38 +108,52 @@ export default function AppLayout() {
           </Link>
         </header>
 
-        <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 pb-28 lg:px-8 lg:pb-10">
+        <main
+          id="main"
+          className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 lg:px-8 lg:pb-10"
+          style={{
+            paddingBottom: "calc(env(safe-area-inset-bottom) + 88px)",
+          }}
+        >
           <Outlet />
         </main>
       </div>
 
       {/* Mobile bottom nav */}
       <nav
-        aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-40 flex border-t bg-white lg:hidden no-print"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-      >
-        {bottom.map((i) => (
-          <Link
-            key={i.to}
-            to={i.to}
-            aria-current={link(i.to) ? "page" : undefined}
-            className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${link(i.to) ? "text-brand" : "text-slate-500"}`}
-          >
-            <i.icon className="h-6 w-6" aria-hidden />
-            {i.label.replace("My ", "")}
-            {i.to === "/notifications" && unread > 0 && (
-              <span className="absolute right-[28%] top-1 h-2.5 w-2.5 rounded-full bg-red-600" aria-hidden />
-            )}
-          </Link>
-        ))}
-        <button
-          onClick={() => setMore(true)}
-          className="flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium text-slate-500"
-        >
-          <MoreHorizontal className="h-6 w-6" aria-hidden />More
-        </button>
-      </nav>
+  aria-label="Primary"
+  className="fixed inset-x-0 bottom-0 z-40 flex border-t bg-white lg:hidden no-print"
+  style={{
+    // Pad the interior so tap targets sit above the home-indicator strip
+    paddingBottom: "calc(env(safe-area-inset-bottom) + 6px)",
+    // Pad the sides so the two corner buttons aren't clipped by round corners
+    paddingLeft: "env(safe-area-inset-left)",
+    paddingRight: "env(safe-area-inset-right)",
+  }}
+>
+  {bottom.map((i) => (
+    <Link
+      key={i.to}
+      to={i.to}
+      aria-current={link(i.to) ? "page" : undefined}
+      className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${
+        link(i.to) ? "text-brand" : "text-slate-500"
+      }`}
+    >
+      <i.icon className="h-6 w-6" aria-hidden />
+      {i.label.replace("My ", "")}
+      {i.to === "/notifications" && unread > 0 && (
+        <span className="absolute right-[28%] top-1 h-2.5 w-2.5 rounded-full bg-red-600" aria-hidden />
+      )}
+    </Link>
+  ))}
+  <button
+    onClick={() => setMore(true)}
+    className="flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium text-slate-500"
+  >
+    <MoreHorizontal className="h-6 w-6" aria-hidden />More
+  </button>
+</nav>
 
       {more && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 lg:hidden" onClick={() => setMore(false)}>

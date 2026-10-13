@@ -488,7 +488,7 @@ export default function ObservationForm() {
   return (
     <>
       <Ambient />
-      <div className="mx-auto max-w-2xl px-4 pb-40 pt-5 sm:px-6 lg:pb-24">
+      <div className="mx-auto max-w-2xl px-4 pt-5 sm:px-6 lg:pb-24" style={{paddingBottom: "calc(env(safe-area-inset-bottom) + 160px)",}}>
 
         {/* ── Sticky glass header ─────────────────────────────────── */}
         <div className="sticky top-0 z-20 -mx-4 mb-4 border-b border-slate-200/60 bg-white/70 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6">
