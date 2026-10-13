@@ -1,0 +1,13 @@
+project_id = "ortsa-stem-academy"
+
+[functions.request-access]
+verify_jwt = false
+
+[functions.external-upload]
+verify_jwt = false
+
+[functions.admin-users]
+verify_jwt = true
+
+[functions.report-narrative]
+verify_jwt = true
