@@ -749,7 +749,7 @@ export default function RegisterDetail() {
           </section>
         )}
 
-        {/* Attendance — in-person */}
+        {/* Attendance - in-person */}
         {!isOnline && (
           <section className="mb-7">
             <SectionLabel icon={CheckCircle2}>
@@ -795,7 +795,7 @@ export default function RegisterDetail() {
           </section>
         )}
 
-        {/* Attendance — online */}
+        {/* Attendance - online */}
         {isOnline && (
           <section className="mb-7">
             <SectionLabel icon={Wifi}>

@@ -127,7 +127,7 @@ function Shell({ title, sub, children }: { title: string; sub?: string; children
           <Link to="/" className="relative flex items-center gap-3">
             <img
               src="/ortsa-logo.png"
-              alt="ORT SA — Educating for Life"
+              alt="ORT SA - Educating for Life"
               className="h-10 w-auto sm:h-11"
             />
           </Link>
@@ -157,7 +157,7 @@ function Shell({ title, sub, children }: { title: string; sub?: string; children
             <Link to="/" className="mb-6 flex items-center justify-center gap-3 lg:hidden">
               <img
                 src="/ortsa-logo.png"
-                alt="ORT SA — Educating for Life"
+                alt="ORT SA - Educating for Life"
                 className="h-9 w-auto"
               />
             </Link>

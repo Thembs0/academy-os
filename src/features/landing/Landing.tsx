@@ -138,7 +138,7 @@ export default function Landing() {
     <div className="inline-flex items-center gap-3 rounded-2xl border border-white/25 bg-white/10 px-4 py-2.5 backdrop-blur">
       <img
         src="/ortsa-logo.png"
-        alt="ORT SA — Educating for Life"
+        alt="ORT SA - Educating for Life"
         className="h-8 w-auto sm:h-9"
       />
       <span className="hidden text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-50 sm:inline">
