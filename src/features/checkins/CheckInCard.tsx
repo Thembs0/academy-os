@@ -40,11 +40,12 @@ function useTodayCheckIns() {
     refetchOnWindowFocus: true,
     staleTime: 15_000,
     queryFn: async () => {
-      // NO FK hint - just the columns and their direct relations
+      // Fetch today's check-ins AND any still-open one from any date.
+      // The "or" clause: check_in_date = today OR end_time is null
       let r = supabase
         .from("facilitator_check_ins")
         .select("*, school:schools(name), project:projects(name)")
-        .eq("check_in_date", today)
+        .or(`check_in_date.eq.${today},end_time.is.null`)
         .order("start_time", { ascending: false });
 
       if (!canViewAll) r = r.eq("user_id", uid!);
@@ -52,7 +53,6 @@ function useTodayCheckIns() {
       const { data, error } = await r;
       if (error) throw error;
 
-      // Optionally, resolve facilitator names in a second pass
       const rows = (data ?? []) as any[];
       if (rows.length > 0) {
         const userIds = [...new Set(rows.map((x) => x.user_id))];
@@ -63,7 +63,6 @@ function useTodayCheckIns() {
         const nameById = new Map((profs ?? []).map((p: any) => [p.id, p.full_name]));
         return rows.map((x) => ({ ...x, profile: { full_name: nameById.get(x.user_id) ?? "" } })) as CheckIn[];
       }
-
       return rows as CheckIn[];
     },
   });
@@ -209,9 +208,14 @@ function FacilitatorCard() {
                   You're at {openCheckIn.school?.name}
                 </div>
                 <div className="text-xs text-slate-500">
-                  <Clock className="mr-1 inline h-3 w-3" /> Since {fmtTime(openCheckIn.start_time)}
-                  {openCheckIn.expected_end && ` · until ~${fmtTime(openCheckIn.expected_end)}`}
+                <Clock className="mr-1 inline h-3 w-3" /> Since {fmtTime(openCheckIn.start_time)}
+                {openCheckIn.expected_end && ` · until ~${fmtTime(openCheckIn.expected_end)}`}
+              </div>
+              {openCheckIn.check_in_date !== new Date().toLocaleDateString("en-CA") && (
+                <div className="mt-1 text-[11px] font-medium text-amber-700">
+                  Still open from {new Date(openCheckIn.check_in_date).toLocaleDateString([], { weekday: "long", day: "numeric", month: "short" })} — please check out.
                 </div>
+              )}
               </div>
               <Badge tone="blue">On site</Badge>
             </div>
@@ -279,23 +283,47 @@ function FacilitatorCard() {
 function OversightList({ limit }: { limit?: number }) {
   const { data, isLoading } = useTodayCheckIns();
   if (isLoading) return <div className="flex items-center gap-2 text-sm text-slate-500"><Spinner /> Loading today…</div>;
+
   const rows = limit ? (data ?? []).slice(0, limit) : (data ?? []);
   if (rows.length === 0) return <div className="text-xs text-slate-500">No check-ins recorded today.</div>;
-  const fmtTime = (iso: string | null) => iso ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-";
+
+  const fmtTime = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-";
+
+  const today = new Date().toLocaleDateString("en-CA");
+
   return (
     <ul className="max-h-56 space-y-1.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
-      {rows.map((c) => (
-        <li key={c.id} className="flex items-center gap-3 rounded-xl border border-slate-200/70 bg-white/60 px-3 py-2">
-          <span className={`h-2 w-2 shrink-0 rounded-full ${c.end_time ? "bg-slate-400" : "bg-emerald-500 shadow-[0_0_8px_2px_rgba(16,185,129,0.4)]"}`} />
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-xs font-semibold text-slate-800">{c.profile?.full_name}</div>
-            <div className="truncate text-[11px] text-slate-500">
-              <MapPin className="mr-1 inline h-3 w-3" /> {c.school?.name} · {fmtTime(c.start_time)} - {fmtTime(c.end_time ?? c.expected_end)}
+      {rows.map((c) => {
+        const isToday = c.check_in_date === today;
+        const isOpen = !c.end_time;
+        const dotClass = !isOpen
+          ? "bg-slate-400"
+          : isToday
+          ? "bg-emerald-500 shadow-[0_0_8px_2px_rgba(16,185,129,0.4)]"
+          : "bg-amber-500 shadow-[0_0_8px_2px_rgba(245,158,11,0.4)]";
+        const badgeTone = !isOpen ? "slate" : isToday ? "green" : "amber";
+        const badgeLabel = !isOpen ? "Done" : isToday ? "On site" : "Stale";
+
+        return (
+          <li
+            key={c.id}
+            className="flex items-center gap-3 rounded-xl border border-slate-200/70 bg-white/60 px-3 py-2"
+          >
+            <span className={`h-2 w-2 shrink-0 rounded-full ${dotClass}`} />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-xs font-semibold text-slate-800">
+                {c.profile?.full_name}
+              </div>
+              <div className="truncate text-[11px] text-slate-500">
+                <MapPin className="mr-1 inline h-3 w-3" /> {c.school?.name} ·{" "}
+                {fmtTime(c.start_time)} - {fmtTime(c.end_time ?? c.expected_end)}
+              </div>
             </div>
-          </div>
-          <Badge tone={c.end_time ? "slate" : "green"}>{c.end_time ? "Done" : "On site"}</Badge>
-        </li>
-      ))}
+            <Badge tone={badgeTone}>{badgeLabel}</Badge>
+          </li>
+        );
+      })}
     </ul>
   );
 }
