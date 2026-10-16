@@ -113,12 +113,13 @@ function FacilitatorForm({ onClose }: { onClose: () => void }) {
         .maybeSingle();
       if (open) throw new Error("You are already checked in. Check out first before starting a new session.");
 
-      const { data, error } = await supabase
+        const { data, error } = await supabase
         .from("facilitator_check_ins")
         .insert({
           user_id: a.profile!.id,
           project_id: projectId,
           school_id: schoolId,
+          check_in_date: new Date().toLocaleDateString("en-CA"),
           expected_end: expected ? new Date(expected).toISOString() : null,
         })
         .select();
