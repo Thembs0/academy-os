@@ -7,8 +7,6 @@ import { useAuth } from "@/features/auth/AuthProvider";
 import { Alert, Badge, Modal, LabeledSelect, LabeledInput, Spinner } from "@/components/ui";
 import { fmtDate } from "@/utils/format";
 
-
-
 /* ─────────────────────────────────────────────────────────────────────────
    Data hook - what's happening today, and what the current user can do
    ───────────────────────────────────────────────────────────────────────── */
@@ -95,55 +93,78 @@ function FacilitatorForm({ onClose }: { onClose: () => void }) {
         .eq("user_id", a.profile!.id)
         .eq("is_active", true);
       if (error) throw error;
-      return ((data ?? []) as any[]).map((r) => r.school).filter(Boolean).sort((x: any, y: any) => x.name.localeCompare(y.name));
+      return ((data ?? []) as any[])
+        .map((r) => r.school)
+        .filter(Boolean)
+        .sort((x: any, y: any) => x.name.localeCompare(y.name));
     },
   });
 
-const submit = useMutation({
-  mutationFn: async () => {
-    if (!projectId || !schoolId) throw new Error("Pick a project and a school.");
+  const submit = useMutation({
+    mutationFn: async () => {
+      if (!projectId || !schoolId) throw new Error("Pick a project and a school.");
 
-    // NEW: refuse if the user already has an open check-in
-    const { data: open } = await supabase
-      .from("facilitator_check_ins")
-      .select("id")
-      .eq("user_id", a.profile!.id)
-      .is("end_time", null)
-      .maybeSingle();
-    if (open) throw new Error("You are already checked in. Check out first before starting a new session.");
+      // Refuse if the user already has an open check-in
+      const { data: open } = await supabase
+        .from("facilitator_check_ins")
+        .select("id")
+        .eq("user_id", a.profile!.id)
+        .is("end_time", null)
+        .maybeSingle();
+      if (open) throw new Error("You are already checked in. Check out first before starting a new session.");
 
-    const { data, error } = await supabase
-      .from("facilitator_check_ins")
-      .insert({
-        user_id: a.profile!.id,
-        project_id: projectId,
-        school_id: schoolId,
-        expected_end: expected ? new Date(expected).toISOString() : null,
-      })
-      .select();
-    if (error) throw error;
-    if (!data || data.length === 0) throw new Error("Insert returned no row.");
-  },
-  onSuccess: async () => {
-    await qc.invalidateQueries({ queryKey: ["check-ins-today"] });
-    await qc.refetchQueries({ queryKey: ["check-ins-today"] });
-    onClose();
-  },
-  onError: (e) => setErr(errMsg(e)),
-});
+      const { data, error } = await supabase
+        .from("facilitator_check_ins")
+        .insert({
+          user_id: a.profile!.id,
+          project_id: projectId,
+          school_id: schoolId,
+          expected_end: expected ? new Date(expected).toISOString() : null,
+        })
+        .select();
+      if (error) throw error;
+      if (!data || data.length === 0) throw new Error("Insert returned no row.");
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["check-ins-today"] });
+      await qc.refetchQueries({ queryKey: ["check-ins-today"] });
+      onClose();
+    },
+    onError: (e) => setErr(errMsg(e)),
+  });
 
   return (
     <div className="space-y-3">
       {a.memberships.length > 1 && (
-        <LabeledSelect label="Project" value={projectId} onChange={(e) => { setProjectId(e.target.value); setSchoolId(""); }}>
-          {a.memberships.map((m) => <option key={m.project_id} value={m.project_id}>{m.project?.name ?? m.project_id}</option>)}
+        <LabeledSelect
+          label="Project"
+          value={projectId}
+          onChange={(e) => { setProjectId(e.target.value); setSchoolId(""); }}
+        >
+          {a.memberships.map((m) => (
+            <option key={m.project_id} value={m.project_id}>
+              {m.project?.name ?? m.project_id}
+            </option>
+          ))}
         </LabeledSelect>
       )}
-      <LabeledSelect label="School for today" required value={schoolId} onChange={(e) => setSchoolId(e.target.value)}>
+      <LabeledSelect
+        label="School for today"
+        required
+        value={schoolId}
+        onChange={(e) => setSchoolId(e.target.value)}
+      >
         <option value="">Select school…</option>
-        {schools.data?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        {schools.data?.map((s) => (
+          <option key={s.id} value={s.id}>{s.name}</option>
+        ))}
       </LabeledSelect>
-      <LabeledInput label="Expected finish time" type="datetime-local" value={expected} onChange={(e) => setExpected(e.target.value)} />
+      <LabeledInput
+        label="Expected finish time"
+        type="datetime-local"
+        value={expected}
+        onChange={(e) => setExpected(e.target.value)}
+      />
       {err && <Alert tone="red">{err}</Alert>}
       <button
         className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-brand to-brand-700 px-5 py-3.5 text-sm font-bold text-white shadow-[0_12px_28px_-14px_rgba(15,23,42,0.6)] ring-1 ring-inset ring-white/15 transition-all duration-200 hover:-translate-y-0.5 hover:brightness-[1.04] active:translate-y-0 active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-60"
@@ -167,14 +188,15 @@ function FacilitatorCard() {
   const qc = useQueryClient();
   const [err, setErr] = useState<string | null>(null);
 
-  // The currently-open check-in (if any). At most one by DB constraint.
   const openCheckIn = (data ?? []).find((c) => c.end_time === null) ?? null;
-  // The most recent check-in today (open or completed), for the "you were at" display.
   const latest = data?.[0] ?? null;
 
   const checkOut = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("facilitator_check_ins").update({ end_time: new Date().toISOString() }).eq("id", id);
+      const { error } = await supabase
+        .from("facilitator_check_ins")
+        .update({ end_time: new Date().toISOString() })
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["check-ins-today"] }),
@@ -208,14 +230,18 @@ function FacilitatorCard() {
                   You're at {openCheckIn.school?.name}
                 </div>
                 <div className="text-xs text-slate-500">
-                <Clock className="mr-1 inline h-3 w-3" /> Since {fmtTime(openCheckIn.start_time)}
-                {openCheckIn.expected_end && ` · until ~${fmtTime(openCheckIn.expected_end)}`}
-              </div>
-              {openCheckIn.check_in_date !== new Date().toLocaleDateString("en-CA") && (
-                <div className="mt-1 text-[11px] font-medium text-amber-700">
-                  Still open from {new Date(openCheckIn.check_in_date).toLocaleDateString([], { weekday: "long", day: "numeric", month: "short" })} — please check out.
+                  <Clock className="mr-1 inline h-3 w-3" /> Since {fmtTime(openCheckIn.start_time)}
+                  {openCheckIn.expected_end && ` · until ~${fmtTime(openCheckIn.expected_end)}`}
                 </div>
-              )}
+                {openCheckIn.check_in_date !== new Date().toLocaleDateString("en-CA") && (
+                  <div className="mt-1 text-[11px] font-medium text-amber-700">
+                    Still open from{" "}
+                    {new Date(openCheckIn.check_in_date).toLocaleDateString([], {
+                      weekday: "long", day: "numeric", month: "short",
+                    })}{" "}
+                    — please check out.
+                  </div>
+                )}
               </div>
               <Badge tone="blue">On site</Badge>
             </div>
@@ -276,13 +302,20 @@ function FacilitatorCard() {
     </>
   );
 }
+
 /* ─────────────────────────────────────────────────────────────────────────
    Oversight view - Admin / Manager / Coordinator
    ───────────────────────────────────────────────────────────────────────── */
 
 function OversightList({ limit }: { limit?: number }) {
   const { data, isLoading } = useTodayCheckIns();
-  if (isLoading) return <div className="flex items-center gap-2 text-sm text-slate-500"><Spinner /> Loading today…</div>;
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-slate-500">
+        <Spinner /> Loading today…
+      </div>
+    );
+  }
 
   const rows = limit ? (data ?? []).slice(0, limit) : (data ?? []);
   if (rows.length === 0) return <div className="text-xs text-slate-500">No check-ins recorded today.</div>;
@@ -316,8 +349,8 @@ function OversightList({ limit }: { limit?: number }) {
                 {c.profile?.full_name}
               </div>
               <div className="truncate text-[11px] text-slate-500">
-                <MapPin className="mr-1 inline h-3 w-3" /> {c.school?.name} ·{" "}
-                {fmtTime(c.start_time)} - {fmtTime(c.end_time ?? c.expected_end)}
+                <MapPin className="mr-1 inline h-3 w-3" /> {c.school?.name} · {fmtTime(c.start_time)} -{" "}
+                {fmtTime(c.end_time ?? c.expected_end)}
               </div>
             </div>
             <Badge tone={badgeTone}>{badgeLabel}</Badge>
@@ -336,11 +369,27 @@ function HodPicker() {
   const [selected, setSelected] = useState<string | null>(null);
   const { data } = useTodayCheckIns();
 
-  // Build the list of facilitators from check-ins + their names
-  const facilitators = (data ?? []).map((c) => ({ id: c.user_id, name: c.profile?.full_name ?? "Unknown", checkIn: c }));
+  // One entry per facilitator, using their most recent check-in.
+  // `data` is sorted by start_time desc, so the first-seen row per user wins.
+  const facilitators = Array.from(
+    (data ?? [])
+      .reduce((map, c) => {
+        if (!map.has(c.user_id)) {
+          map.set(c.user_id, {
+            id: c.user_id,
+            name: c.profile?.full_name ?? "Unknown",
+            checkIn: c,
+          });
+        }
+        return map;
+      }, new Map<string, { id: string; name: string; checkIn: CheckIn }>())
+      .values()
+  );
   const chosen = facilitators.find((f) => f.id === selected);
 
-  if (facilitators.length === 0) return <div className="text-xs text-slate-500">No check-ins today.</div>;
+  if (facilitators.length === 0) {
+    return <div className="text-xs text-slate-500">No check-ins today.</div>;
+  }
 
   return (
     <div className="space-y-3">
@@ -365,7 +414,9 @@ function HodPicker() {
 
       {chosen && (
         <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-3 text-sm">
-          <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Today · {fmtDate(chosen.checkIn.check_in_date)}</div>
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            Today · {fmtDate(chosen.checkIn.check_in_date)}
+          </div>
           <div className="mt-1.5 flex items-center gap-2 text-slate-800">
             <MapPin className="h-4 w-4 text-brand" />
             <span className="font-semibold">{chosen.checkIn.school?.name}</span>
@@ -377,7 +428,9 @@ function HodPicker() {
             {chosen.checkIn.end_time
               ? new Date(chosen.checkIn.end_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
               : `~${new Date(chosen.checkIn.expected_end ?? chosen.checkIn.start_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
-            <Badge tone={chosen.checkIn.end_time ? "slate" : "green"}>{chosen.checkIn.end_time ? "Done" : "On site"}</Badge>
+            <Badge tone={chosen.checkIn.end_time ? "slate" : "green"}>
+              {chosen.checkIn.end_time ? "Done" : "On site"}
+            </Badge>
           </div>
         </div>
       )}
@@ -402,4 +455,3 @@ export function CheckInCard() {
   if (canViewAssigned) return <OversightList limit={6} />;
   return null;
 }
-
