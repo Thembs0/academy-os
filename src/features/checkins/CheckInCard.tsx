@@ -100,27 +100,32 @@ function FacilitatorForm({ onClose }: { onClose: () => void }) {
     },
   });
 
-  const submit = useMutation({
+const submit = useMutation({
   mutationFn: async () => {
     if (!projectId || !schoolId) throw new Error("Pick a project and a school.");
-    if (!a.session?.user.id) throw new Error("Not signed in.");
+
+    // NEW: refuse if the user already has an open check-in
+    const { data: open } = await supabase
+      .from("facilitator_check_ins")
+      .select("id")
+      .eq("user_id", a.profile!.id)
+      .is("end_time", null)
+      .maybeSingle();
+    if (open) throw new Error("You are already checked in. Check out first before starting a new session.");
 
     const { data, error } = await supabase
       .from("facilitator_check_ins")
       .insert({
-        user_id: a.session.user.id,
+        user_id: a.profile!.id,
         project_id: projectId,
         school_id: schoolId,
-        check_in_date: new Date().toLocaleDateString("en-CA"),
         expected_end: expected ? new Date(expected).toISOString() : null,
       })
       .select();
-
     if (error) throw error;
     if (!data || data.length === 0) throw new Error("Insert returned no row.");
   },
   onSuccess: async () => {
-    // Two-step invalidation: prefix match, then force an immediate refetch
     await qc.invalidateQueries({ queryKey: ["check-ins-today"] });
     await qc.refetchQueries({ queryKey: ["check-ins-today"] });
     onClose();
@@ -162,7 +167,11 @@ function FacilitatorCard() {
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
   const [err, setErr] = useState<string | null>(null);
-  const today = data?.[0];
+
+  // The currently-open check-in (if any). At most one by DB constraint.
+  const openCheckIn = (data ?? []).find((c) => c.end_time === null) ?? null;
+  // The most recent check-in today (open or completed), for the "you were at" display.
+  const latest = data?.[0] ?? null;
 
   const checkOut = useMutation({
     mutationFn: async (id: string) => {
@@ -173,14 +182,74 @@ function FacilitatorCard() {
     onError: (e) => setErr(errMsg(e)),
   });
 
-  if (isLoading) return <div className="flex items-center gap-2 text-sm text-slate-500"><Spinner /> Loading today…</div>;
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-slate-500">
+        <Spinner /> Loading today…
+      </div>
+    );
+  }
 
-  const fmtTime = (iso: string | null) => iso ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-";
+  const fmtTime = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-";
 
   return (
     <>
       <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-3.5 backdrop-blur">
-        {!today ? (
+        {openCheckIn ? (
+          /* ── Currently on site ─────────────────────────────────── */
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand/10 ring-1 ring-inset ring-brand/20">
+                <span className="absolute inset-0 animate-ping rounded-2xl bg-brand/20" />
+                <MapPin className="relative h-5 w-5 text-brand" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-bold text-slate-900">
+                  You're at {openCheckIn.school?.name}
+                </div>
+                <div className="text-xs text-slate-500">
+                  <Clock className="mr-1 inline h-3 w-3" /> Since {fmtTime(openCheckIn.start_time)}
+                  {openCheckIn.expected_end && ` · until ~${fmtTime(openCheckIn.expected_end)}`}
+                </div>
+              </div>
+              <Badge tone="blue">On site</Badge>
+            </div>
+            {err && <Alert tone="red">{err}</Alert>}
+            <button
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
+              disabled={checkOut.isPending}
+              onClick={() => { setErr(null); checkOut.mutate(openCheckIn.id); }}
+            >
+              <LogOut className="h-3.5 w-3.5" /> {checkOut.isPending ? "Checking out…" : "Check out"}
+            </button>
+          </div>
+        ) : latest ? (
+          /* ── Checked in earlier today, now closed ─────────────── */
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 ring-1 ring-inset ring-emerald-200">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-bold text-slate-900">
+                  You were at {latest.school?.name}
+                </div>
+                <div className="text-xs text-slate-500">
+                  <Clock className="mr-1 inline h-3 w-3" /> {fmtTime(latest.start_time)} – {fmtTime(latest.end_time)}
+                </div>
+              </div>
+              <Badge tone="slate">Completed</Badge>
+            </div>
+            <button
+              onClick={() => setOpen(true)}
+              className="group flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
+            >
+              <LogIn className="h-3.5 w-3.5" /> Check in again
+            </button>
+          </div>
+        ) : (
+          /* ── Not checked in at all today ───────────────────────── */
           <button
             onClick={() => setOpen(true)}
             className="group flex w-full items-center gap-3 text-left"
@@ -194,44 +263,6 @@ function FacilitatorCard() {
             </span>
             <ChevronRight className="h-4 w-4 text-slate-400 transition-transform duration-200 group-hover:translate-x-0.5" />
           </button>
-        ) : today.end_time ? (
-          <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 ring-1 ring-inset ring-emerald-200">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-bold text-slate-900">You were at {today.school?.name}</div>
-              <div className="text-xs text-slate-500">
-                <Clock className="mr-1 inline h-3 w-3" /> {fmtTime(today.start_time)} - {fmtTime(today.end_time)}
-              </div>
-            </div>
-            <Badge tone="green">Completed</Badge>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand/10 ring-1 ring-inset ring-brand/20">
-                <span className="absolute inset-0 animate-ping rounded-2xl bg-brand/20" />
-                <MapPin className="relative h-5 w-5 text-brand" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-bold text-slate-900">You're at {today.school?.name}</div>
-                <div className="text-xs text-slate-500">
-                  <Clock className="mr-1 inline h-3 w-3" /> Since {fmtTime(today.start_time)}
-                  {today.expected_end && ` · until ~${fmtTime(today.expected_end)}`}
-                </div>
-              </div>
-              <Badge tone="blue">On site</Badge>
-            </div>
-            {err && <Alert tone="red">{err}</Alert>}
-            <button
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
-              disabled={checkOut.isPending}
-              onClick={() => { setErr(null); checkOut.mutate(today.id); }}
-            >
-              <LogOut className="h-3.5 w-3.5" /> {checkOut.isPending ? "Checking out…" : "Check out"}
-            </button>
-          </div>
         )}
       </div>
 
@@ -241,7 +272,6 @@ function FacilitatorCard() {
     </>
   );
 }
-
 /* ─────────────────────────────────────────────────────────────────────────
    Oversight view - Admin / Manager / Coordinator
    ───────────────────────────────────────────────────────────────────────── */
