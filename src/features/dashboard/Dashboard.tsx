@@ -96,9 +96,9 @@ export default function Dashboard() {
             title={`${greeting()}, ${first}`}
             subtitle={field ? "Ready for the field?" : a.persona === "hod" || a.persona === "super_admin" ? "Department overview" : "Here's what needs your attention."}
           />
-          <div className="lg:w-[380px]">
-            <CheckInCard />
-          </div>
+          <div className="w-full min-w-0 lg:w-[380px]">
+          <CheckInCard />
+        </div>
         </div>
       </div>
 
