@@ -8,7 +8,7 @@ import { Alert, Badge, Modal, LabeledSelect, LabeledInput, Spinner } from "@/com
 import { fmtDate } from "@/utils/format";
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Data hook - what's happening today, and what the current user can do
+   Data hook
    ───────────────────────────────────────────────────────────────────────── */
 
 interface CheckIn {
@@ -38,8 +38,6 @@ function useTodayCheckIns() {
     refetchOnWindowFocus: true,
     staleTime: 15_000,
     queryFn: async () => {
-      // Fetch today's check-ins AND any still-open one from any date.
-      // The "or" clause: check_in_date = today OR end_time is null
       let r = supabase
         .from("facilitator_check_ins")
         .select("*, school:schools(name), project:projects(name)")
@@ -67,7 +65,7 @@ function useTodayCheckIns() {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Facilitator form - pick school, expected end
+   Facilitator form
    ───────────────────────────────────────────────────────────────────────── */
 
 function FacilitatorForm({ onClose }: { onClose: () => void }) {
@@ -104,7 +102,6 @@ function FacilitatorForm({ onClose }: { onClose: () => void }) {
     mutationFn: async () => {
       if (!projectId || !schoolId) throw new Error("Pick a project and a school.");
 
-      // Refuse if the user already has an open check-in
       const { data: open } = await supabase
         .from("facilitator_check_ins")
         .select("id")
@@ -113,7 +110,7 @@ function FacilitatorForm({ onClose }: { onClose: () => void }) {
         .maybeSingle();
       if (open) throw new Error("You are already checked in. Check out first before starting a new session.");
 
-        const { data, error } = await supabase
+      const { data, error } = await supabase
         .from("facilitator_check_ins")
         .insert({
           user_id: a.profile!.id,
@@ -143,9 +140,7 @@ function FacilitatorForm({ onClose }: { onClose: () => void }) {
           onChange={(e) => { setProjectId(e.target.value); setSchoolId(""); }}
         >
           {a.memberships.map((m) => (
-            <option key={m.project_id} value={m.project_id}>
-              {m.project?.name ?? m.project_id}
-            </option>
+            <option key={m.project_id} value={m.project_id}>{m.project?.name ?? m.project_id}</option>
           ))}
         </LabeledSelect>
       )}
@@ -156,9 +151,7 @@ function FacilitatorForm({ onClose }: { onClose: () => void }) {
         onChange={(e) => setSchoolId(e.target.value)}
       >
         <option value="">Select school…</option>
-        {schools.data?.map((s) => (
-          <option key={s.id} value={s.id}>{s.name}</option>
-        ))}
+        {schools.data?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
       </LabeledSelect>
       <LabeledInput
         label="Expected finish time"
@@ -180,7 +173,7 @@ function FacilitatorForm({ onClose }: { onClose: () => void }) {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Facilitator view - hero card
+   Facilitator view
    ───────────────────────────────────────────────────────────────────────── */
 
 function FacilitatorCard() {
@@ -217,35 +210,42 @@ function FacilitatorCard() {
 
   return (
     <>
-      <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-3.5 backdrop-blur">
+      <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-4 backdrop-blur">
         {openCheckIn ? (
           /* ── Currently on site ─────────────────────────────────── */
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand/10 ring-1 ring-inset ring-brand/20">
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand/10 ring-1 ring-inset ring-brand/20">
                 <span className="absolute inset-0 animate-ping rounded-2xl bg-brand/20" />
                 <MapPin className="relative h-5 w-5 text-brand" />
               </span>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-bold text-slate-900">
-                  You're at {openCheckIn.school?.name}
+                <div className="text-[13px] font-bold leading-tight text-slate-900">
+                  You're at{" "}
+                  <span className="truncate">{openCheckIn.school?.name ?? "your school"}</span>
                 </div>
-                <div className="text-xs text-slate-500">
-                  <Clock className="mr-1 inline h-3 w-3" /> Since {fmtTime(openCheckIn.start_time)}
-                  {openCheckIn.expected_end && ` · until ~${fmtTime(openCheckIn.expected_end)}`}
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] leading-tight text-slate-500">
+                  <span className="inline-flex items-center gap-1">
+                    <Clock className="h-3 w-3" /> Since {fmtTime(openCheckIn.start_time)}
+                  </span>
+                  {openCheckIn.expected_end && (
+                    <span className="inline-flex items-center gap-1">
+                      · until ~{fmtTime(openCheckIn.expected_end)}
+                    </span>
+                  )}
                 </div>
-                {openCheckIn.check_in_date !== new Date().toLocaleDateString("en-CA") && (
-                  <div className="mt-1 text-[11px] font-medium text-amber-700">
-                    Still open from{" "}
-                    {new Date(openCheckIn.check_in_date).toLocaleDateString([], {
-                      weekday: "long", day: "numeric", month: "short",
-                    })}{" "}
-                    — please check out.
-                  </div>
-                )}
               </div>
               <Badge tone="blue">On site</Badge>
             </div>
+            {openCheckIn.check_in_date !== new Date().toLocaleDateString("en-CA") && (
+              <div className="rounded-xl border border-amber-200/70 bg-amber-50/70 px-2.5 py-1.5 text-[11px] font-medium leading-snug text-amber-800">
+                Still open from{" "}
+                {new Date(openCheckIn.check_in_date).toLocaleDateString([], {
+                  weekday: "short", day: "numeric", month: "short",
+                })}{" "}
+                — please check out.
+              </div>
+            )}
             {err && <Alert tone="red">{err}</Alert>}
             <button
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
@@ -257,17 +257,18 @@ function FacilitatorCard() {
           </div>
         ) : latest ? (
           /* ── Checked in earlier today, now closed ─────────────── */
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 ring-1 ring-inset ring-emerald-200">
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 ring-1 ring-inset ring-emerald-200">
                 <CheckCircle2 className="h-5 w-5 text-emerald-600" />
               </span>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-bold text-slate-900">
-                  You were at {latest.school?.name}
+                <div className="text-[13px] font-bold leading-tight text-slate-900">
+                  You were at{" "}
+                  <span className="truncate">{latest.school?.name ?? "your school"}</span>
                 </div>
-                <div className="text-xs text-slate-500">
-                  <Clock className="mr-1 inline h-3 w-3" /> {fmtTime(latest.start_time)} – {fmtTime(latest.end_time)}
+                <div className="mt-1 text-[11px] leading-tight text-slate-500">
+                  {fmtTime(latest.start_time)} – {fmtTime(latest.end_time)}
                 </div>
               </div>
               <Badge tone="slate">Completed</Badge>
@@ -285,14 +286,14 @@ function FacilitatorCard() {
             onClick={() => setOpen(true)}
             className="group flex w-full items-center gap-3 text-left"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand/15 to-brand/5 ring-1 ring-inset ring-brand/20">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand/15 to-brand/5 ring-1 ring-inset ring-brand/20">
               <LogIn className="h-5 w-5 text-brand" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold text-slate-900">Not checked in today</span>
-              <span className="block text-xs text-slate-500">Tap to tell us where you are</span>
+              <span className="block text-[13px] font-bold leading-tight text-slate-900">Not checked in today</span>
+              <span className="block text-[11px] leading-tight text-slate-500">Tap to tell us where you are</span>
             </span>
-            <ChevronRight className="h-4 w-4 text-slate-400 transition-transform duration-200 group-hover:translate-x-0.5" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 group-hover:translate-x-0.5" />
           </button>
         )}
       </div>
@@ -305,7 +306,7 @@ function FacilitatorCard() {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Oversight view - Admin / Manager / Coordinator
+   Oversight view
    ───────────────────────────────────────────────────────────────────────── */
 
 function OversightList({ limit }: { limit?: number }) {
@@ -342,16 +343,17 @@ function OversightList({ limit }: { limit?: number }) {
         return (
           <li
             key={c.id}
-            className="flex items-center gap-3 rounded-xl border border-slate-200/70 bg-white/60 px-3 py-2"
+            className="flex items-center gap-2.5 rounded-xl border border-slate-200/70 bg-white/60 px-3 py-2"
           >
             <span className={`h-2 w-2 shrink-0 rounded-full ${dotClass}`} />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-xs font-semibold text-slate-800">
-                {c.profile?.full_name}
+              <div className="truncate text-[12px] font-semibold leading-tight text-slate-800">
+                {c.profile?.full_name ?? "Unknown"}
               </div>
-              <div className="truncate text-[11px] text-slate-500">
-                <MapPin className="mr-1 inline h-3 w-3" /> {c.school?.name} · {fmtTime(c.start_time)} -{" "}
-                {fmtTime(c.end_time ?? c.expected_end)}
+              <div className="mt-0.5 flex items-center gap-1 truncate text-[10.5px] leading-tight text-slate-500">
+                <MapPin className="h-2.5 w-2.5 shrink-0" />
+                <span className="truncate">{c.school?.name ?? "-"}</span>
+                <span className="shrink-0">· {fmtTime(c.start_time)}–{fmtTime(c.end_time ?? c.expected_end)}</span>
               </div>
             </div>
             <Badge tone={badgeTone}>{badgeLabel}</Badge>
@@ -363,15 +365,13 @@ function OversightList({ limit }: { limit?: number }) {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   HOD view - pick a facilitator, see their status
+   HOD picker
    ───────────────────────────────────────────────────────────────────────── */
 
 function HodPicker() {
   const [selected, setSelected] = useState<string | null>(null);
   const { data } = useTodayCheckIns();
 
-  // One entry per facilitator, using their most recent check-in.
-  // `data` is sorted by start_time desc, so the first-seen row per user wins.
   const facilitators = Array.from(
     (data ?? [])
       .reduce((map, c) => {
@@ -399,7 +399,7 @@ function HodPicker() {
           <button
             key={f.id}
             onClick={() => setSelected(f.id)}
-            className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
+            className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all ${
               selected === f.id
                 ? "bg-gradient-to-b from-brand to-brand-700 text-white shadow-[0_4px_12px_-6px_rgba(15,23,42,0.5)]"
                 : "bg-white/70 text-slate-700 ring-1 ring-inset ring-slate-200/70 hover:bg-white"
@@ -415,20 +415,22 @@ function HodPicker() {
 
       {chosen && (
         <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-3 text-sm">
-          <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+          <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
             Today · {fmtDate(chosen.checkIn.check_in_date)}
           </div>
           <div className="mt-1.5 flex items-center gap-2 text-slate-800">
-            <MapPin className="h-4 w-4 text-brand" />
-            <span className="font-semibold">{chosen.checkIn.school?.name}</span>
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-brand" />
+            <span className="truncate text-[13px] font-semibold">{chosen.checkIn.school?.name}</span>
           </div>
-          <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-600">
-            <Clock className="h-3 w-3" />
-            {new Date(chosen.checkIn.start_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-            {" - "}
-            {chosen.checkIn.end_time
-              ? new Date(chosen.checkIn.end_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-              : `~${new Date(chosen.checkIn.expected_end ?? chosen.checkIn.start_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+            <span className="inline-flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {new Date(chosen.checkIn.start_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              {" – "}
+              {chosen.checkIn.end_time
+                ? new Date(chosen.checkIn.end_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                : `~${new Date(chosen.checkIn.expected_end ?? chosen.checkIn.start_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+            </span>
             <Badge tone={chosen.checkIn.end_time ? "slate" : "green"}>
               {chosen.checkIn.end_time ? "Done" : "On site"}
             </Badge>
@@ -440,8 +442,9 @@ function HodPicker() {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Public component - the card that goes in the hero
+   Public dispatch
    ───────────────────────────────────────────────────────────────────────── */
+
 export function CheckInCard() {
   const a = useAuth();
   const isFacilitator = a.isFieldUser && a.can("check_ins.submit");
